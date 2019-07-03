@@ -144,13 +144,23 @@ void forestry::addTrees(size_t ntree) {
           // Generate a sample index for each tree
           std::vector<size_t> sampleIndex;
 
+          // CHANGE HERE FOR SAMPLING WEIGHTS IN BOOTSTRAP
           if (isReplacement()) {
-            std::uniform_int_distribution<size_t> unif_dist(
-              0, (size_t) (*getTrainingData()).getNumRows() - 1
+            // If bootstrap weights are specified, utilize those in discrete dist.
+            std::vector<float> observationWeights;
+            std::vector<float>* weights = (*getTrainingData()).getBootstrapWeights();
+
+            for (size_t i = 0; i < weights->size(); i++) {
+              observationWeights.push_back(weights->at(i));
+            }
+
+            std::discrete_distribution<size_t> discrete_dist(
+                observationWeights.begin(), observationWeights.end()
             );
+
             // Generate index with replacement
             while (sampleIndex.size() < getSampleSize()) {
-              size_t randomIndex = unif_dist(random_number_generator);
+              size_t randomIndex = discrete_dist(random_number_generator);
               sampleIndex.push_back(randomIndex);
             }
           } else {

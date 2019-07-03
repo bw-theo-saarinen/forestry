@@ -31,6 +31,7 @@ training_data_checker <- function(x,
                                   splitFeats,
                                   linFeats,
                                   sampleWeights,
+                                  bootstrapWeights,
                                   linear) {
   x <- as.data.frame(x)
   nfeatures <- ncol(x)
@@ -110,13 +111,22 @@ training_data_checker <- function(x,
   if (length(sampleWeights) != ncol(x)) {
     stop("Must have sample weight length equal to columns in data")
   }
-  if (min(sampleWeights < 0)) {
+  if (min(sampleWeights) < 0) {
     stop("sampleWeights must be greater than 0")
   }
   if (min(sampleWeights) <= .001*max(sampleWeights)) {
     stop("MAX(sampleWeights):MIN(sampleWeights) must be < 1000")
   }
 
+  if (length(bootstrapWeights) != nrow(x)) {
+    stop("Must have bootstrap weights for all observations")
+  }
+  if (min(bootstrapWeights) < 0) {
+    stop("Bootstrap weights must be greater than 0")
+  }
+
+
+  bootstrapWeights <- (bootstrapWeights / sum(bootstrapWeights))
   sampleWeights <- (sampleWeights / sum(sampleWeights))
 
   # if the splitratio is 1, then we use adaptive rf and avgSampleSize is the
@@ -219,7 +229,8 @@ training_data_checker <- function(x,
               "doubleTree" = doubleTree,
               "splitFeats" = splitFeats,
               "linFeats" = linFeats,
-              "sampleWeights" = sampleWeights))
+              "sampleWeights" = sampleWeights,
+              "bootstrapWeights" = bootstrapWeights))
 }
 
 #' @title Test data check
@@ -263,6 +274,7 @@ setClass(
     splitFeats = "numeric",
     linFeats = "numeric",
     sampleWeights = "numeric",
+    bootstrapWeights = "numeric",
     overfitPenalty = "numeric",
     doubleTree = "logical"
   )
@@ -298,6 +310,7 @@ setClass(
     splitFeats = "numeric",
     linFeats = "numeric",
     sampleWeights = "numeric",
+    bootstrapWeights = "numeric",
     overfitPenalty = "numeric",
     doubleTree = "logical"
   )
@@ -374,6 +387,10 @@ setClass(
 #'   linear (defaults to use all numerical features)
 #' @param sampleWeights Specify weights for weighted uniform distribution used
 #'   to randomly sample features.
+#' @param bootstrapWeights Specify weights by which to weight observations when
+#'   bootstrap sampling is done on the training data. Note that weights need not
+#'   sum to one, the relative weight will be used. Only use weights for replace
+#'   = TRUE. WARNING THIS IS EXPERIMENTAL
 #' @param overfitPenalty Value to determine how much to penalize magnitude of
 #'   coefficients in ridge regression when using linear. The default value is 1.
 #' @return A `forestry` object.
@@ -453,6 +470,7 @@ forestry <- function(x,
                      splitFeats = 1:(ncol(x)),
                      linFeats = 1:(ncol(x)),
                      sampleWeights = rep((1/ncol(x)), ncol(x)),
+                     bootstrapWeights = rep(1, nrow(x)),
                      overfitPenalty = 1,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
@@ -487,6 +505,7 @@ forestry <- function(x,
       splitFeats = splitFeats,
       linFeats = linFeats,
       sampleWeights = sampleWeights,
+      bootstrapWeights = bootstrapWeights,
       linear = linear)
 
   for (variable in names(updated_variables)) {
@@ -526,7 +545,8 @@ forestry <- function(x,
                                                   linFeats,
                                                   nObservations,
                                                   numColumns,
-                                                  sampleWeights)
+                                                  sampleWeights,
+                                                  bootstrapWeights)
 
       rcppForest <- rcpp_cppBuildInterface(
         processed_x,
@@ -553,6 +573,7 @@ forestry <- function(x,
         middleSplit,
         maxObs,
         sampleWeights,
+        bootstrapWeights,
         linear,
         overfitPenalty,
         doubleTree,
@@ -594,6 +615,7 @@ forestry <- function(x,
           middleSplit = middleSplit,
           maxObs = maxObs,
           sampleWeights = sampleWeights,
+          bootstrapWeights = bootstrapWeights,
           linear = linear,
           splitFeats = splitFeats,
           linFeats = linFeats,
@@ -647,6 +669,7 @@ forestry <- function(x,
         middleSplit,
         maxObs,
         sampleWeights,
+        bootstrapWeights,
         linear,
         overfitPenalty,
         doubleTree,
@@ -678,6 +701,7 @@ forestry <- function(x,
           middleSplit = middleSplit,
           maxObs = maxObs,
           sampleWeights = sampleWeights,
+          bootstrapWeights = bootstrapWeights,
           linear = linear,
           splitFeats = splitFeats,
           linFeats = linFeats,
@@ -732,6 +756,7 @@ multilayerForestry <- function(x,
                      splitFeats = 1:(ncol(x)),
                      linFeats = 1:(ncol(x)),
                      sampleWeights = rep((1/ncol(x)), ncol(x)),
+                     bootstrapWeights = rep(1, nrow(x)),
                      overfitPenalty = 1,
                      doubleTree = FALSE,
                      reuseforestry = NULL,
@@ -747,7 +772,7 @@ multilayerForestry <- function(x,
   training_data_checker(x, y, ntree,replace, sampsize, mtry, nodesizeSpl,
                         nodesizeAvg, nodesizeStrictSpl, nodesizeStrictAvg,
                         minSplitGain, maxDepth, splitratio, nthread, middleSplit,
-                        doubleTree, splitFeats, linFeats, sampleWeights)
+                        doubleTree, splitFeats, linFeats, sampleWeights, bootstrapWeights)
   # Total number of obervations
   nObservations <- length(y)
   numColumns <- ncol(x)
@@ -780,7 +805,8 @@ multilayerForestry <- function(x,
                                                   linFeats,
                                                   nObservations,
                                                   numColumns,
-                                                  sampleWeights)
+                                                  sampleWeights,
+                                                  bootstrapWeights)
 
       rcppForest <- rcpp_cppMultilayerBuildInterface(
         processed_x,
@@ -1215,6 +1241,7 @@ relinkCPP_prt <- function(object) {
         middleSplit = object@middleSplit,
         maxObs = object@maxObs,
         sampleWeights = object@sampleWeights,
+        bootstrapWeights = object@bootstrapWeights,
         linear = object@linear,
         overfitPenalty = object@overfitPenalty,
         doubleTree = object@doubleTree)
