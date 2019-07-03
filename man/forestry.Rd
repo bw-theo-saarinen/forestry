@@ -12,8 +12,9 @@ forestry(x, y, ntree = 500, replace = TRUE, sampsize = if (replace)
   seed = as.integer(runif(1) * 1000), verbose = FALSE, nthread = 0,
   splitrule = "variance", middleSplit = FALSE, maxObs = length(y),
   linear = FALSE, splitFeats = 1:(ncol(x)), linFeats = 1:(ncol(x)),
-  sampleWeights = rep((1/ncol(x)), ncol(x)), overfitPenalty = 1,
-  doubleTree = FALSE, reuseforestry = NULL, saveable = TRUE)
+  sampleWeights = rep((1/ncol(x)), ncol(x)), bootstrapWeights = rep(1,
+  nrow(x)), overfitPenalty = 1, doubleTree = FALSE,
+  reuseforestry = NULL, saveable = TRUE)
 }
 \arguments{
 \item{x}{A data frame of all training predictors.}
@@ -96,6 +97,11 @@ linear (defaults to use all numerical features)}
 
 \item{sampleWeights}{Specify weights for weighted uniform distribution used
 to randomly sample features.}
+
+\item{bootstrapWeights}{Specify weights by which to weight observations when
+bootstrap sampling is done on the training data. Note that weights need not
+sum to one, the relative weight will be used. Only use weights for replace
+= TRUE. WARNING THIS IS EXPERIMENTAL}
 
 \item{overfitPenalty}{Value to determine how much to penalize magnitude of
 coefficients in ridge regression when using linear. The default value is 1.}
