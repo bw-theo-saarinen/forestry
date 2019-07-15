@@ -120,11 +120,6 @@ forestryTree::forestryTree(
   this->_overfitPenalty = overfitPenalty;
   std::unique_ptr< RFNode > root ( new RFNode() );
   this->_root = std::move(root);
-  this->_benchmark = new std::vector<double>;
-  //for (size_t i = 0; i < 8; i++) {
-  //  _benchmark->push_back(0);
-  //}
-
 
   /* If ridge splitting, initialize RSS components to pass to leaves*/
 
@@ -159,13 +154,11 @@ forestryTree::forestryTree(
     maxObs,
     linear,
     overfitPenalty,
-    getBenchmark(),
     gTotal,
     sTotal
   );
 
   //this->_root->printSubtree();
-  //this->trainTiming();
 }
 
 void forestryTree::setDummyTree(
@@ -513,7 +506,6 @@ void forestryTree::recursivePartition(
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::vector<double>* benchmark,
     arma::Mat<double> gTotal,
     arma::Mat<double> sTotal
 ){
@@ -572,7 +564,6 @@ void forestryTree::recursivePartition(
     maxObs,
     linear,
     overfitPenalty,
-    benchmark,
     gTotal,
     sTotal
   );
@@ -662,7 +653,6 @@ void forestryTree::recursivePartition(
       maxObs,
       linear,
       overfitPenalty,
-      benchmark,
       bestSplitGL,
       bestSplitSL
     );
@@ -677,7 +667,6 @@ void forestryTree::recursivePartition(
       maxObs,
       linear,
       overfitPenalty,
-      benchmark,
       bestSplitGR,
       bestSplitSR
     );
@@ -1308,7 +1297,6 @@ void findBestSplitRidge(
   bool splitMiddle,
   size_t maxObs,
   float overfitPenalty,
-  std::vector<double>* benchmark,
   arma::Mat<double>& gTotal,
   arma::Mat<double>& sTotal
 ){
@@ -1848,7 +1836,6 @@ void forestryTree::selectBestFeature(
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::vector<double>* benchmark,
     arma::Mat<double> &gTotal,
     arma::Mat<double> &sTotal
 ){
@@ -1933,7 +1920,6 @@ void forestryTree::selectBestFeature(
         splitMiddle,
         maxObs,
         overfitPenalty,
-        benchmark,
         gTotal,
         sTotal
       );
