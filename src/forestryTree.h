@@ -99,7 +99,6 @@ public:
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::vector<double>* benchmark,
     arma::Mat<double> gTotal,
     arma::Mat<double> sTotal
   );
@@ -121,7 +120,6 @@ public:
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::vector<double>* benchmark,
     arma::Mat<double>& gTotal,
     arma::Mat<double>& sTotal
   );
@@ -200,10 +198,6 @@ public:
     return _overfitPenalty;
   }
 
-  std::vector<double>* getBenchmark() {
-    return _benchmark;
-  }
-
 private:
   size_t _mtry;
   size_t _minNodeSizeSpt;
@@ -217,7 +211,6 @@ private:
   std::unique_ptr< RFNode > _root;
   bool _linear;
   float _overfitPenalty;
-  std::vector<double>* _benchmark;
 };
 
 
