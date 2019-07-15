@@ -1984,28 +1984,6 @@ void forestryTree::printTree(){
   (*getRoot()).printSubtree();
 }
 
-void forestryTree::trainTiming(){
-
-  /* Record timing for tree construction */
-  double total = (*getBenchmark())[7];
-  double splittime = 0;
-  for (size_t i = 0; i < 7; i++) {
-    splittime += (*getBenchmark())[i];
-  }
-
-  Rcpp::Rcout << "Sorting: " << 100*((*getBenchmark())[0] / total) << "% "
-              << " InitG/S: " << 100*((*getBenchmark())[1] / total) << "% "
-              << " InvertA: " << 100*((*getBenchmark())[2] / total) << "% "
-              << " UpdateA: " << 100*((*getBenchmark())[3] / total) << "% "
-              << " UpdateG: " << 100*((*getBenchmark())[4] / total) << "% "
-              << " UpdateS: " << 100*((*getBenchmark())[5] / total) << "% "
-              << " getRSS: " << 100*((*getBenchmark())[6] / total) << "% "
-              << " Other: " << 100*((total - splittime) / total) << "% "
-              << "Time: " << total << " seconds";
-
-  Rcpp::Rcout << "\n";
-}
-
 void forestryTree::getOOBindex(
     std::vector<size_t> &outputOOBIndex,
     size_t nRows
