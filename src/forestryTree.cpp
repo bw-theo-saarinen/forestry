@@ -155,26 +155,42 @@ forestryTree::forestryTree(
             sTotal
         )
     );
-  } else {
-    std::shared_ptr< arma::Mat<double> > g_ptr = nullptr;
-    std::shared_ptr< arma::Mat<double> > s_ptr = nullptr;
   }
 
-  /* Recursively grow the tree */
-  recursivePartition(
-    getRoot(),
-    getAveragingIndex(),
-    getSplittingIndex(),
-    trainingData,
-    random_number_generator,
-    0,
-    splitMiddle,
-    maxObs,
-    linear,
-    overfitPenalty,
-    g_ptr,
-    s_ptr
-  );
+  if (linear) {
+    /* Recursively grow the tree */
+    recursivePartition(
+      getRoot(),
+      getAveragingIndex(),
+      getSplittingIndex(),
+      trainingData,
+      random_number_generator,
+      0,
+      splitMiddle,
+      maxObs,
+      linear,
+      overfitPenalty,
+      g_ptr,
+      s_ptr
+    );
+  } else {
+
+
+    recursivePartition(
+      getRoot(),
+      getAveragingIndex(),
+      getSplittingIndex(),
+      trainingData,
+      random_number_generator,
+      0,
+      splitMiddle,
+      maxObs,
+      linear,
+      overfitPenalty,
+      nullptr,
+      nullptr
+    );
+  }
 
   //this->_root->printSubtree();
 }
