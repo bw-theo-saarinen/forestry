@@ -141,56 +141,22 @@ forestryTree::forestryTree(
                                   getSplittingIndex());
   }
 
-  /* Use Shared Pointer to make sure G, S matrices deallocated */
 
-  if (linear) {
-    std::shared_ptr< arma::Mat<double> > g_ptr (
-        new arma::Mat<double>(
-            gTotal
-        )
-    );
-
-    std::shared_ptr< arma::Mat<double> > s_ptr (
-        new arma::Mat<double>(
-            sTotal
-        )
-    );
-  }
-
-  if (linear) {
-    /* Recursively grow the tree */
-    recursivePartition(
-      getRoot(),
-      getAveragingIndex(),
-      getSplittingIndex(),
-      trainingData,
-      random_number_generator,
-      0,
-      splitMiddle,
-      maxObs,
-      linear,
-      overfitPenalty,
-      g_ptr,
-      s_ptr
-    );
-  } else {
-
-
-    recursivePartition(
-      getRoot(),
-      getAveragingIndex(),
-      getSplittingIndex(),
-      trainingData,
-      random_number_generator,
-      0,
-      splitMiddle,
-      maxObs,
-      linear,
-      overfitPenalty,
-      nullptr,
-      nullptr
-    );
-  }
+  /* Recursively grow the tree */
+  recursivePartition(
+    getRoot(),
+    getAveragingIndex(),
+    getSplittingIndex(),
+    trainingData,
+    random_number_generator,
+    0,
+    splitMiddle,
+    maxObs,
+    linear,
+    overfitPenalty,
+    gTotal,
+    sTotal
+  );
 
   //this->_root->printSubtree();
 }
@@ -540,8 +506,8 @@ void forestryTree::recursivePartition(
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::shared_ptr< arma::Mat<double> > gTotal,
-    std::shared_ptr< arma::Mat<double> > sTotal
+    arma::Mat<double> &gTotal,
+    arma::Mat<double> &sTotal
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
@@ -676,37 +642,6 @@ void forestryTree::recursivePartition(
 
     size_t childDepth = depth + 1;
 
-    // If doing linear splitting, make shared pointer to GL, GR, SL, SR
-    // and pass to next recursive partition, else pass nullptr
-
-    if (linear) {
-      std::shared_ptr< arma::Mat<double> > gLeft_ptr (
-          new arma::Mat<double>(
-              bestSplitGL
-          )
-      );
-      std::shared_ptr< arma::Mat<double> > sLeft_ptr (
-          new arma::Mat<double>(
-              bestSplitSL
-          )
-      );
-      std::shared_ptr< arma::Mat<double> > gRight_ptr (
-          new arma::Mat<double>(
-              bestSplitGR
-          )
-      );
-      std::shared_ptr< arma::Mat<double> > sRight_ptr (
-          new arma::Mat<double>(
-              bestSplitSR
-          )
-      );
-    } else {
-      std::shared_ptr< arma::Mat<double> > gLeft_ptr = nullptr;
-      std::shared_ptr< arma::Mat<double> > sLeft_ptr = nullptr;
-      std::shared_ptr< arma::Mat<double> > gRight_ptr = nullptr;
-      std::shared_ptr< arma::Mat<double> > sRight_ptr = nullptr;
-    }
-
     recursivePartition(
       leftChild.get(),
       &averagingLeftPartitionIndex,
@@ -718,8 +653,8 @@ void forestryTree::recursivePartition(
       maxObs,
       linear,
       overfitPenalty,
-      gLeft_ptr,
-      sLeft_ptr
+      bestSplitGL,
+      bestSplitSL
     );
     recursivePartition(
       rightChild.get(),
@@ -732,8 +667,8 @@ void forestryTree::recursivePartition(
       maxObs,
       linear,
       overfitPenalty,
-      gRight_ptr,
-      sRight_ptr
+      bestSplitGR,
+      bestSplitSR
     );
 
     (*rootNode).setSplitNode(
@@ -1063,8 +998,8 @@ void findBestSplitRidgeCategorical(
     size_t averageNodeSize,
     std::mt19937_64& random_number_generator,
     float overfitPenalty,
-    const arma::Mat<double>& gTotal,
-    const arma::Mat<double>& sTotal
+    arma::Mat<double>& gTotal,
+    arma::Mat<double>& sTotal
 ) {
   /* Put all categories in a set
    * aggregate G_k matrices to put in left node when splitting
@@ -1362,8 +1297,8 @@ void findBestSplitRidge(
   bool splitMiddle,
   size_t maxObs,
   float overfitPenalty,
-  const arma::Mat<double>& gTotal,
-  const arma::Mat<double>& sTotal
+  arma::Mat<double>& gTotal,
+  arma::Mat<double>& sTotal
 ){
 
   //Get indexes of observations
@@ -1901,8 +1836,8 @@ void forestryTree::selectBestFeature(
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::shared_ptr< arma::Mat<double> > gTotal,
-    std::shared_ptr< arma::Mat<double> > sTotal
+    arma::Mat<double> &gTotal,
+    arma::Mat<double> &sTotal
 ){
 
   // Get the number of total features
@@ -1948,8 +1883,8 @@ void forestryTree::selectBestFeature(
           getMinNodeSizeToSplitAvg(),
           random_number_generator,
           overfitPenalty,
-          (*gTotal),
-          (*sTotal)
+          gTotal,
+          sTotal
         );
       } else {
         findBestSplitValueCategorical(
@@ -1985,8 +1920,8 @@ void forestryTree::selectBestFeature(
         splitMiddle,
         maxObs,
         overfitPenalty,
-        (*gTotal),
-        (*sTotal)
+        gTotal,
+        sTotal
       );
     } else {
       findBestSplitValueNonCategorical(
