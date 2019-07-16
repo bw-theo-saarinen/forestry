@@ -506,8 +506,8 @@ void forestryTree::recursivePartition(
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    arma::Mat<double> gTotal,
-    arma::Mat<double> sTotal
+    arma::Mat<double> &gTotal,
+    arma::Mat<double> &sTotal
 ){
   if ((*averagingSampleIndex).size() < getMinNodeSizeAvg() ||
       (*splittingSampleIndex).size() < getMinNodeSizeSpt() ||
