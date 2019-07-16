@@ -99,8 +99,8 @@ public:
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::shared_ptr< arma::Mat<double> > gTotal,
-    std::shared_ptr< arma::Mat<double> > sTotal
+    arma::Mat<double>& gTotal,
+    arma::Mat<double>& sTotal
   );
 
   void selectBestFeature(
@@ -120,8 +120,8 @@ public:
     size_t maxObs,
     bool linear,
     float overfitPenalty,
-    std::shared_ptr< arma::Mat<double> > gTotal,
-    std::shared_ptr< arma::Mat<double> > sTotal
+    arma::Mat<double>& gTotal,
+    arma::Mat<double>& sTotal
   );
 
   void initializelinear(

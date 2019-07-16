@@ -142,6 +142,10 @@ forestryTree::forestryTree(
   }
 
 
+  /* Make shared pointers to sTotal, gTotal*/
+  g_ptr = std::make_shared< arma::Mat<double> >(gTotal);
+  s_ptr = std::make_shared< arma::Mat<double> >(sTotal);
+
   /* Recursively grow the tree */
   recursivePartition(
     getRoot(),
