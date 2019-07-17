@@ -146,10 +146,10 @@ forestryTree::forestryTree(
   std::shared_ptr< arma::Mat<double> > g_ptr = std::make_shared< arma::Mat<double> >(gTotal);
   std::shared_ptr< arma::Mat<double> > s_ptr = std::make_shared< arma::Mat<double> >(sTotal);
 
-  // if (!linear) {
-  //   g_ptr = nullptr;
-  //   s_ptr = nullptr;
-  // }
+  if (!linear) {
+    g_ptr = nullptr;
+    s_ptr = nullptr;
+  }
 
 
   /* Recursively grow the tree */
@@ -553,10 +553,21 @@ void forestryTree::recursivePartition(
   size_t bestSplitFeature;
   double bestSplitValue;
   float bestSplitLoss;
-  arma::Mat<double> bestSplitGL(size(*gtotal));
-  arma::Mat<double> bestSplitGR(size(*gtotal));
-  arma::Mat<double> bestSplitSL(size(*stotal));
-  arma::Mat<double> bestSplitSR(size(*stotal));
+
+  /* Arma mat memory is uninitialized now */
+  arma::Mat<double> bestSplitGL;
+  arma::Mat<double> bestSplitGR;
+  arma::Mat<double> bestSplitSL;
+  arma::Mat<double> bestSplitSR;
+
+
+  /* IF LINEAR set size correctly */
+  if (linear) {
+    bestSplitGL.set_size(size(*gtotal));
+    bestSplitGR.set_size(size(*gtotal));
+    bestSplitSL.set_size(size(*stotal));
+    bestSplitSR.set_size(size(*stotal));
+  }
 
   selectBestFeature(
     bestSplitFeature,
@@ -658,6 +669,13 @@ void forestryTree::recursivePartition(
 
     std::shared_ptr< arma::Mat<double> > s_ptr_r = std::make_shared< arma::Mat<double> >(bestSplitSR);
     std::shared_ptr< arma::Mat<double> > s_ptr_l = std::make_shared< arma::Mat<double> >(bestSplitSL);
+
+    if (!linear) {
+      g_ptr_r = nullptr;
+      g_ptr_l = nullptr;
+      s_ptr_r = nullptr;
+      s_ptr_l = nullptr;
+    }
 
     recursivePartition(
       leftChild.get(),
