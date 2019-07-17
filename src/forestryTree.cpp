@@ -1006,8 +1006,8 @@ void findBestSplitRidgeCategorical(
     size_t averageNodeSize,
     std::mt19937_64& random_number_generator,
     float overfitPenalty,
-    const arma::Mat<double>& gTotal,
-    const arma::Mat<double>& sTotal
+    std::shared_ptr< arma::Mat<double> > gtotal,
+    std::shared_ptr< arma::Mat<double> > stotal
 ) {
   /* Put all categories in a set
    * aggregate G_k matrices to put in left node when splitting
@@ -1023,17 +1023,18 @@ void findBestSplitRidgeCategorical(
    * call updateBestSplitRidge with correct G_k matrices
    */
 
+
   // Set to hold all different categories
   std::set<float> all_categories;
   std::vector<float> temp;
 
   // temp matrices for RSS components
-  arma::Mat<double> gRightTemp(size(gTotal));
-  arma::Mat<double> sRightTemp(size(sTotal));
-  arma::Mat<double> aRightTemp(size(gTotal));
-  arma::Mat<double> aLeftTemp(size(gTotal));
-  arma::Mat<double> crossingObservation(size(sTotal));
-  arma::Mat<double> identity(size(gTotal));
+  arma::Mat<double> gRightTemp(size((*gtotal)));
+  arma::Mat<double> sRightTemp(size((*stotal)));
+  arma::Mat<double> aRightTemp(size((*gtotal)));
+  arma::Mat<double> aLeftTemp(size((*gtotal)));
+  arma::Mat<double> crossingObservation(size((*stotal)));
+  arma::Mat<double> identity(size((*gtotal)));
 
   identity.eye();
   identity(identity.n_rows-1, identity.n_cols-1) = 0.0;
@@ -1067,8 +1068,8 @@ void findBestSplitRidgeCategorical(
   ) {
     splittingCategoryCount[*it] = 0;
     averagingCategoryCount[*it] = 0;
-    gMatrices[*it] = arma::Mat<double>(size(gTotal)).zeros();
-    sMatrices[*it] = arma::Mat<double>(size(sTotal)).zeros();
+    gMatrices[*it] = arma::Mat<double>(size(*gtotal)).zeros();
+    sMatrices[*it] = arma::Mat<double>(size(*stotal)).zeros();
   }
 
   // Put all matrices in map
@@ -1118,8 +1119,8 @@ void findBestSplitRidgeCategorical(
     ) {
       continue;
     }
-    gRightTemp = gTotal - gMatrices[*it];
-    sRightTemp = sTotal - sMatrices[*it];
+    gRightTemp = (*gtotal) - gMatrices[*it];
+    sRightTemp = (*stotal) - sMatrices[*it];
 
     aRightTemp = (gRightTemp + overfitPenalty * identity).i();
     aLeftTemp = (gMatrices[*it] + overfitPenalty * identity).i();
@@ -1305,8 +1306,8 @@ void findBestSplitRidge(
   bool splitMiddle,
   size_t maxObs,
   float overfitPenalty,
-  const arma::Mat<double>& gTotal,
-  const arma::Mat<double>& sTotal
+  std::shared_ptr< arma::Mat<double> > gtotal,
+  std::shared_ptr< arma::Mat<double> > stotal
 ){
 
   //Get indexes of observations
@@ -1398,8 +1399,8 @@ void findBestSplitRidge(
     currentIndex,
     numLinearFeatures,
     overfitPenalty,
-    gTotal,
-    sTotal,
+    (*gtotal),
+    (*stotal),
     aLeft,
     aRight,
     sLeft,
@@ -1891,8 +1892,8 @@ void forestryTree::selectBestFeature(
           getMinNodeSizeToSplitAvg(),
           random_number_generator,
           overfitPenalty,
-          (*gtotal),
-          (*stotal)
+          (gtotal),
+          (stotal)
         );
       } else {
         findBestSplitValueCategorical(
@@ -1928,8 +1929,8 @@ void forestryTree::selectBestFeature(
         splitMiddle,
         maxObs,
         overfitPenalty,
-        (*gtotal),
-        (*stotal)
+        (gtotal),
+        (stotal)
       );
     } else {
       findBestSplitValueNonCategorical(
