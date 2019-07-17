@@ -146,6 +146,7 @@ forestryTree::forestryTree(
   std::shared_ptr< arma::Mat<double> > g_ptr = std::make_shared< arma::Mat<double> >(gTotal);
   std::shared_ptr< arma::Mat<double> > s_ptr = std::make_shared< arma::Mat<double> >(sTotal);
 
+  /* When not linear splitting, use nullptr for unneeded matrices */
   if (!linear) {
     g_ptr = nullptr;
     s_ptr = nullptr;
@@ -561,7 +562,7 @@ void forestryTree::recursivePartition(
   arma::Mat<double> bestSplitSR;
 
 
-  /* IF LINEAR set size correctly */
+  /* IF LINEAR set size of Arma splitting matrices correctly */
   if (linear) {
     bestSplitGL.set_size(size(*gtotal));
     bestSplitGR.set_size(size(*gtotal));
