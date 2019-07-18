@@ -811,6 +811,8 @@ multilayerForestry <- function(x,
                                                   sampleWeights,
                                                   bootstrapWeights)
 
+      print(paste0(  "Type of rcppDataframe is" , typeof(rcppDataFrame) ))
+
       rcppForest <- rcpp_cppMultilayerBuildInterface(
         processed_x,
         y,
@@ -838,6 +840,7 @@ multilayerForestry <- function(x,
         middleSplit,
         maxObs,
         sampleWeights,
+        bootstrapWeights,
         linear,
         gtBoost,
         overfitPenalty,
@@ -938,6 +941,7 @@ multilayerForestry <- function(x,
         middleSplit,
         maxObs,
         sampleWeights,
+        bootstrapWeights,
         linear,
         gtBoost,
         overfitPenalty,
