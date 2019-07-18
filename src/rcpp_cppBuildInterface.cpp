@@ -316,6 +316,7 @@ SEXP rcpp_cppMultilayerBuildInterface(
     Rcpp::NumericVector sampleWeights,
     Rcpp::NumericVector bootstrapWeights,
     bool linear,
+    bool gtBoost,
     double overfitPenalty,
     bool doubleTree,
     bool existing_dataframe_flag,
@@ -348,6 +349,7 @@ SEXP rcpp_cppMultilayerBuildInterface(
         middleSplit,
         (size_t) maxObs,
         linear,
+        gtBoost,
         (float) overfitPenalty,
         doubleTree
       );

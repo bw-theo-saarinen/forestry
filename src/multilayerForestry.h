@@ -39,11 +39,21 @@ public:
     bool splitMiddle,
     size_t maxObs,
     bool linear,
+    bool gtBoost,
     float overfitPenalty,
     bool doubleTree
   );
 
   void addForests(size_t ntree);
+
+  float get_alpha(
+      DataFrame* trainingData,
+      std::vector<size_t> sampleIndex,
+      std::vector< forestry* > forests
+  );
+
+  std::vector<float>* accumulated_predict(std::vector< forestry* > forests,
+                                          std::vector< std::vector<float> >* xNew);
 
   std::unique_ptr< std::vector<float> > predict(
       std::vector< std::vector<float> >* xNew,
@@ -135,6 +145,10 @@ public:
     return _linear;
   }
 
+  bool getgtBoost() {
+    return _gtBoost;
+  }
+
   float getOverfitPenalty() {
     return _overfitPenalty;
   }
@@ -179,6 +193,7 @@ private:
   bool _splitMiddle;
   size_t _maxObs;
   bool _linear;
+  bool _gtBoost;
   float _overfitPenalty;
   bool _doubleTree;
 

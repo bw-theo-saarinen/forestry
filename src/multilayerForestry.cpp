@@ -33,6 +33,7 @@ multilayerForestry::multilayerForestry(
   bool splitMiddle,
   size_t maxObs,
   bool linear,
+  bool gtBoost,
   float overfitPenalty,
   bool doubleTree
 ){
@@ -56,16 +57,132 @@ multilayerForestry::multilayerForestry(
   this->_splitMiddle = splitMiddle;
   this->_maxObs = maxObs;
   this->_linear = linear;
+  this->_gtBoost = gtBoost;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
 
   addForests(ntree);
 }
 
+// Helper to slice vector of indices [start:end] (inclusive)
+std::vector<size_t> slice(std::vector<int> &v, int start, int end)
+{
+  std::vector<size_t> vec;
+  std::copy(v.begin() + start, v.begin() + end + 1, std::back_inserter(vec));
+  return vec;
+}
+
+float multilayerForestry::get_alpha(
+    DataFrame* trainingData,
+    std::vector<size_t> sampleIndex,
+    std::vector< forestry* > forests
+){
+  //return value of alpha (gradient tree boosting transfer) for particular leaf node
+
+  // get original predicted mean
+  size_t totalSampleSize = (sampleIndex).size();
+  float accummulatedSum = 0;
+  for (
+      std::vector<size_t>::iterator it = (sampleIndex).begin();
+      it != (sampleIndex).end();
+      ++it
+  ) {
+    accummulatedSum += trainingData->getOutcomePoint(*it);
+  }
+  float predicted_mean = accummulatedSum / totalSampleSize;
+
+  // get residuals
+  std::vector<float> residuals;
+  for (
+      std::vector<size_t>::iterator it = (sampleIndex).begin();
+      it != (sampleIndex).end();
+      ++it
+  ) {
+    residuals.push_back(trainingData->getOutcomePoint(*it) - predicted_mean);
+  }
+
+  // get mean and stdev of residuals
+  float sum = std::accumulate(residuals.begin(), residuals.end(), 0.0);
+  float mean_r = sum / residuals.size();
+
+  std::vector<float> diff(residuals.size());
+  std::transform(residuals.begin(), residuals.end(), diff.begin(),
+                 std::bind2nd(std::minus<double>(), mean_r));
+  float sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+  float stdev_r = std::sqrt(sq_sum / diff.size());
+
+  // populate keep_idx
+  std::vector<size_t> keep_idx;
+  for (
+      std::vector<size_t>::iterator it = (sampleIndex).begin();
+      it != (sampleIndex).end();
+      ++it
+  ) {
+    std::vector<float> rowData(trainingData->getNumColumns());
+    trainingData->getObservationData(rowData, *it);
+    // if transfer point or correctly predicted base point (within 1 stdev of 0) keep point
+    // assuming last feature in row indicates whether in transfer set
+    if ((rowData[trainingData->getNumColumns()-1]==1) || ((trainingData->getOutcomePoint(*it) - predicted_mean)/stdev_r < 1)){
+      keep_idx.push_back(*it);
+    }
+  }
+
+  // analytically compute optimal value of alpha
+  // if current_iteration == 0  use mean as prediction
+  accummulatedSum = 0;
+  for (
+      std::vector<size_t>::iterator it = (sampleIndex).begin();
+      it != (sampleIndex).end();
+      ++it
+  ) {
+    std::vector< std::vector<float> >* rowData = new std::vector< std::vector<float> >(1);
+    trainingData->getObservationData((*rowData)[0], *it);
+    float y = trainingData->getOutcomePoint(*it);
+    // NEEDS TO BE CHANGED TO USE MULTIPLE PREDICTIONS
+    accummulatedSum += y - (*accumulated_predict(forests,
+                                                 rowData))[0];
+  }
+  float alpha = accummulatedSum/keep_idx.size();
+
+  return alpha;
+}
+
+// Returns naive sum of forest predictions up to iteration given, if iteration
+// With base learner as avg of dataset,
+std::vector<float>* multilayerForestry::accumulated_predict(std::vector< forestry* > forests,
+                                                            std::vector< std::vector<float> >* xNew
+) {
+
+  std::unique_ptr< std::vector<float> > initialPrediction =
+    forests[0]->predict(xNew,
+                        NULL,
+                        NULL,
+                        NULL);
+
+  std::vector<float>* prediction = new std::vector<float>(initialPrediction->size());
+  std::fill (prediction->begin(),
+             prediction->end(),
+             getMeanOutcome());
+
+  for (int i = 0; i < forests.size(); i ++) {
+    std::unique_ptr< std::vector<float> > predictedResiduals =
+      forests[i]->predict(xNew,
+                          NULL,
+                          NULL,
+                          NULL);
+
+    std::transform(prediction->begin(), prediction->end(),
+                   predictedResiduals->begin(), prediction->begin(), std::plus<float>());
+  }
+
+  return prediction;
+}
+
+
 void multilayerForestry::addForests(size_t ntree) {
 
   // Create vectors to store gradient boosted forests and gamma values
-  std::vector< forestry* > multilayerForests(_nrounds);
+  std::vector< forestry* > multilayerForests;
   std::vector<float> gammas(_nrounds);
 
   // Calculate initial prediction
@@ -140,14 +257,89 @@ void multilayerForestry::addForests(size_t ntree) {
       _doubleTree
     );
 
-    multilayerForests[i] = residualForest;
+    multilayerForests.push_back(residualForest);
+    /* Here add the step which replaces leaf node values with correct alphas */
+
+    /*  Steps
+     *
+     *  1) Get vectors of leaf observations
+     *
+     *  2) Pass to function to calculate alphas and assign to nodes
+     *
+     *  3) Modify predict to return alpha correctly
+     *
+     */
+
+
+    // ADD FLAG FOR GRADIENT TREE BOOSTING
+
+    if (getgtBoost()) {
+      // Get leaf node ID's from residual forest
+      std::unique_ptr< std::vector<tree_info> > residual_forest_dta(
+          new std::vector<tree_info>
+      );
+
+      residualForest->fillinTreeInfo(residual_forest_dta);
+
+      std::vector< std::vector<size_t> > all_split_ids;
+
+      for (size_t k = 0; k < residual_forest_dta->size(); k++) {
+
+        // Get node sizes vector from tree data
+        std::vector<int> split_ids = ((*residual_forest_dta)[k]).var_id;
+        // Note we are using the averaging indices here
+        std::vector<int> avg_ids = ((*residual_forest_dta)[k]).leafAveidx;
+
+        // Vector of vectors of node averaging indices to pass to getAlpha function
+        std::vector< std::vector<size_t> > node_indices;
+
+        std::vector<int> node_sizes;
+        std::vector<int> node_sizes_filtered;
+        for(const auto & id : split_ids) {
+          if(id < 0) {
+            node_sizes.push_back(-id);
+          }
+        }
+        // Filter every other one if neg as we have duplicates
+        for (size_t j = 1; j < node_sizes.size(); j += 2) {
+          node_sizes_filtered.push_back(node_sizes[j]);
+        }
+
+        size_t start_idx = 0;
+        for (size_t curr_node = 0; curr_node < node_sizes_filtered.size(); curr_node++) {
+            std::vector<size_t> node_i_ids = slice(avg_ids,
+                                                   start_idx,
+                                                   start_idx + node_sizes_filtered[curr_node] - 1);
+
+            node_indices.push_back(node_i_ids);
+            start_idx += node_sizes_filtered[curr_node];
+        }
+
+
+        // current iteration is i
+        // std::vector< forestry* > multilayerForests(_nrounds);
+        // Now calculate getAlpha of each subset of averaging indices
+        std::vector<float> node_alphas(node_indices.size());
+        for (size_t j = 0; j < node_alphas.size(); j++) {
+          node_alphas[j] = get_alpha(trainingData,
+                                     node_indices[j],
+                                     multilayerForests);
+        }
+
+        // Now use vector of alhpas to set alpha values of nodes
+
+        // all_split_ids.push_back(split_ids);
+      }
+
+    } // END GT Boost step
+
     std::unique_ptr< std::vector<float> > predictedResiduals =
       residualForest->predict(getTrainingData()->getAllFeatureData(),
                               NULL,
                               NULL,
                               NULL);
 
-    // Calculate and store best gamma value
+      // Calculate and store best gamma value
     // std::vector<float> bestPredictedResiduals(trainingData->getNumRows());
     // float minMeanSquaredError = INFINITY;
     // static inline float computeSquare (float x) { return x*x; }
