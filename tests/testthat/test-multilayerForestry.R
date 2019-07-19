@@ -10,7 +10,7 @@ test_that("Tests that multilayerForestry is working correctly", {
   forest <- multilayerForestry(
     x,
     y,
-    ntree = 500,
+    ntree = 1,
     nrounds = 2,
     replace = TRUE,
     sample.fraction = .8,
@@ -20,7 +20,8 @@ test_that("Tests that multilayerForestry is working correctly", {
     nthread = 2,
     splitrule = "variance",
     splitratio = 1,
-    nodesizeStrictAvg = 5
+    nodesizeStrictAvg = 5,
+    gtBoost = TRUE
   )
   # Test predict
   y_pred <- predict(forest, x)

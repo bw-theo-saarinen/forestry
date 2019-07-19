@@ -7,9 +7,16 @@
 #include <iostream>
 
 void print_vector(
-  std::vector<size_t> v
+  std::vector<int> v
 );
 
+void print_vector(
+    std::vector<size_t> v
+);
+
+void print_vector(
+    std::vector<float> v
+);
 
 struct tree_info {
   std::vector< int > var_id;

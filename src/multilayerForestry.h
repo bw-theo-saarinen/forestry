@@ -47,12 +47,11 @@ public:
   void addForests(size_t ntree);
 
   float get_alpha(
-      DataFrame* trainingData,
       std::vector<size_t> sampleIndex,
       std::vector< forestry* > forests
   );
 
-  std::vector<float>* accumulated_predict(std::vector< forestry* > forests,
+  std::unique_ptr< std::vector<float> > accumulated_predict(std::vector< forestry* > forests,
                                           std::vector< std::vector<float> >* xNew);
 
   std::unique_ptr< std::vector<float> > predict(
