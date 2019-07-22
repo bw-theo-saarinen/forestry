@@ -48,11 +48,10 @@ public:
 
   float get_alpha(
       std::vector<size_t> sampleIndex,
-      std::vector< forestry* > forests
+      std::unique_ptr<float> accumulatedPredictions
   );
 
-  std::unique_ptr< std::vector<float> > accumulated_predict(std::vector< forestry* > forests,
-                                          std::vector< std::vector<float> >* xNew);
+  std::vector<float> accumulated_predict(std::vector< forestry* > forests);
 
   std::unique_ptr< std::vector<float> > predict(
       std::vector< std::vector<float> >* xNew,
