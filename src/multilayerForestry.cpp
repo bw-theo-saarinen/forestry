@@ -135,6 +135,7 @@ void multilayerForestry::addForests(size_t ntree) {
       _verbose,
       _splitMiddle,
       _maxObs,
+      false,
       _linear,
       _overfitPenalty,
       _doubleTree

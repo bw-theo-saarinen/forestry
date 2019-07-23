@@ -32,7 +32,8 @@ training_data_checker <- function(x,
                                   linFeats,
                                   sampleWeights,
                                   bootstrapWeights,
-                                  linear) {
+                                  linear,
+                                  hasNas) {
   x <- as.data.frame(x)
   nfeatures <- ncol(x)
 
@@ -43,8 +44,16 @@ training_data_checker <- function(x,
 
   # Check if x and y contain missing values
   if (any(is.na(x))) {
-    stop("x contains missing data.")
+    hasNas <- TRUE
+    print("x contains missing data, using forest imputation.")
+  } else {
+    hasNas <- FALSE
   }
+
+  if (linear && hasNas) {
+    stop("Cannot do imputation splitting with linear")
+  }
+
   if (any(is.na(y))) {
     stop("y contains missing data.")
   }
@@ -230,7 +239,8 @@ training_data_checker <- function(x,
               "splitFeats" = splitFeats,
               "linFeats" = linFeats,
               "sampleWeights" = sampleWeights,
-              "bootstrapWeights" = bootstrapWeights))
+              "bootstrapWeights" = bootstrapWeights,
+              "hasNas" = hasNas))
 }
 
 #' @title Test data check
@@ -270,6 +280,7 @@ setClass(
     middleSplit = "logical",
     y = "vector",
     maxObs = "numeric",
+    hasNas = "logical",
     linear = "logical",
     splitFeats = "numeric",
     linFeats = "numeric",
@@ -306,6 +317,7 @@ setClass(
     middleSplit = "logical",
     y = "vector",
     maxObs = "numeric",
+    hasNas = "logical",
     linear = "logical",
     splitFeats = "numeric",
     linFeats = "numeric",
@@ -466,6 +478,10 @@ forestry <- function(x,
                      splitrule = "variance",
                      middleSplit = FALSE,
                      maxObs = length(y),
+                     hasNas = if (any(is.na(x)))
+                       TRUE
+                     else
+                       FALSE,
                      linear = FALSE,
                      splitFeats = 1:(ncol(x)),
                      linFeats = 1:(ncol(x)),
@@ -506,7 +522,8 @@ forestry <- function(x,
       linFeats = linFeats,
       sampleWeights = sampleWeights,
       bootstrapWeights = bootstrapWeights,
-      linear = linear)
+      linear = linear,
+      hasNas = hasNas)
 
   for (variable in names(updated_variables)) {
     assign(x = variable, value = updated_variables[[variable]],
@@ -574,6 +591,7 @@ forestry <- function(x,
         maxObs,
         sampleWeights,
         bootstrapWeights,
+        hasNas,
         linear,
         overfitPenalty,
         doubleTree,
@@ -616,6 +634,7 @@ forestry <- function(x,
           maxObs = maxObs,
           sampleWeights = sampleWeights,
           bootstrapWeights = bootstrapWeights,
+          hasNas = hasNas,
           linear = linear,
           splitFeats = splitFeats,
           linFeats = linFeats,
@@ -670,6 +689,7 @@ forestry <- function(x,
         maxObs,
         sampleWeights,
         bootstrapWeights,
+        hasNas,
         linear,
         overfitPenalty,
         doubleTree,
@@ -702,6 +722,7 @@ forestry <- function(x,
           maxObs = maxObs,
           sampleWeights = sampleWeights,
           bootstrapWeights = bootstrapWeights,
+          hasNas = hasNas,
           linear = linear,
           splitFeats = splitFeats,
           linFeats = linFeats,
@@ -1243,6 +1264,7 @@ relinkCPP_prt <- function(object) {
         sampleWeights = object@sampleWeights,
         bootstrapWeights = object@bootstrapWeights,
         linear = object@linear,
+        hasNas = object@hasNas,
         overfitPenalty = object@overfitPenalty,
         doubleTree = object@doubleTree)
 

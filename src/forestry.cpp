@@ -40,6 +40,7 @@ forestry::forestry(
   bool verbose,
   bool splitMiddle,
   size_t maxObs,
+  bool hasNas,
   bool linear,
   float overfitPenalty,
   bool doubleTree
@@ -61,6 +62,7 @@ forestry::forestry(
   this->_verbose = verbose;
   this->_splitMiddle = splitMiddle;
   this->_maxObs = maxObs;
+  this->_hasNas = hasNas;
   this->_linear = linear;
   this->_overfitPenalty = overfitPenalty;
   this->_doubleTree = doubleTree;
@@ -90,11 +92,21 @@ forestry::forestry(
     throw std::runtime_error("overfitPenalty cannot be negative");
   }
 
+  if (
+      linear && hasNas
+  ) {
+    throw std::runtime_error("Imputation for missing values cannot be done for ridge splitting");
+  }
+
 
   std::unique_ptr< std::vector< std::unique_ptr< forestryTree > > > forest (
     new std::vector< std::unique_ptr< forestryTree > >
   );
   this->_forest = std::move(forest);
+
+  if (hasNas) {
+    std::cout << "Building forest with imputation splitting" << std::flush << std::endl;
+  }
 
   // Create initial trees
   addTrees(ntree);

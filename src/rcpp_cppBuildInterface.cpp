@@ -136,6 +136,7 @@ SEXP rcpp_cppBuildInterface(
   int maxObs,
   Rcpp::NumericVector sampleWeights,
   Rcpp::NumericVector bootstrapWeights,
+  bool hasNas,
   bool linear,
   double overfitPenalty,
   bool doubleTree,
@@ -166,6 +167,7 @@ SEXP rcpp_cppBuildInterface(
         verbose,
         middleSplit,
         (size_t) maxObs,
+        hasNas,
         linear,
         (float) overfitPenalty,
         doubleTree
@@ -263,6 +265,7 @@ SEXP rcpp_cppBuildInterface(
         verbose,
         middleSplit,
         (size_t) maxObs,
+        hasNas,
         linear,
         (float) overfitPenalty,
         doubleTree
@@ -672,6 +675,7 @@ Rcpp::List rcpp_reconstructree(
   int maxObs,
   Rcpp::NumericVector sampleWeights,
   Rcpp::NumericVector bootstrapWeights,
+  bool hasNas,
   bool linear,
   double overfitPenalty,
   bool doubleTree
@@ -809,6 +813,7 @@ Rcpp::List rcpp_reconstructree(
     (bool) verbose,
     (bool) middleSplit,
     (int) maxObs,
+    (bool) hasNas,
     (bool) linear,
     (float) overfitPenalty,
     doubleTree
