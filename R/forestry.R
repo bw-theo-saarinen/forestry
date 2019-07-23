@@ -770,6 +770,11 @@ multilayerForestry <- function(x,
   splitFeats <- unique(splitFeats)
   linFeats <- unique(linFeats)
 
+  if(gtBoost) {
+    print("Using gradient tree boosting, ntree set to 1")
+    ntree = 1
+  }
+
   x <- as.data.frame(x)
   # Preprocess the data
   training_data_checker(x, y, ntree,replace, sampsize, mtry, nodesizeSpl,

@@ -74,11 +74,10 @@ std::vector<size_t> slice(std::vector<size_t> &v, int start, int end)
 
 float multilayerForestry::get_alpha(
     std::vector<size_t> sampleIndex,
-    std::unique_ptr<float> accumulatedPredictions
+    std::vector<float> accumulatedPredictions
 ){
   //return value of alpha (gradient tree boosting transfer) for particular leaf node
 
-  float alpha = 5.32;
   // get original predicted mean
   size_t totalSampleSize = (sampleIndex).size();
   float accummulatedSum = 0;
@@ -90,7 +89,6 @@ float multilayerForestry::get_alpha(
     accummulatedSum += getTrainingData()->getOutcomePoint(*it);
   }
   float predicted_mean = accummulatedSum / totalSampleSize;
-  alpha = predicted_mean;
 
   // get residuals
   std::vector<float> residuals;
@@ -154,19 +152,19 @@ float multilayerForestry::get_alpha(
       current_observation->push_back(entry);
     }
 
-    std::cout << "vector to predict is " << std::flush << std::endl;
-    print_vector(row_data);
+    // std::cout << "vector to predict is " << std::flush << std::endl;
+    // print_vector(row_data);
 
     // Make outcome vector with orientation correct
 
-    std::cout << "Working fine up to " << (*it) << std::flush << std::endl;
+    // std::cout << "Working fine up to " << (*it) << std::flush << std::endl;
     float y = getTrainingData()->getOutcomePoint(*it);
     // NEEDS TO BE CHANGED TO USE MULTIPLE PREDICTIONS
-    accummulatedSum += y - accumulatedPredictions->at(*it);
+    accummulatedSum += y - accumulatedPredictions.at(*it);
 
-    std::cout << "Accumulated sum is " << accummulatedSum << std::flush << std::endl;
+    // std::cout << "Accumulated sum is " << accummulatedSum << std::flush << std::endl;
   }
-  alpha = accummulatedSum/keep_idx.size();
+  float alpha = accummulatedSum/keep_idx.size();
 
   return alpha;
 }
@@ -176,20 +174,16 @@ float multilayerForestry::get_alpha(
 std::vector<float> multilayerForestry::accumulated_predict(std::vector< forestry* > forests
 ) {
 
-  std::cout << "There are " << forests.size() << " Residual forests in the stack" << std::flush << std::endl;
-
   std::unique_ptr< std::vector<float> > initialPrediction = forests[0]->predict(getTrainingData()->getAllFeatureData(),
-                                                                         NULL,
-                                                                         NULL,
-                                                                         NULL);
+                                                                                NULL,
+                                                                                NULL,
+                                                                                NULL);
 
   std::vector<float> prediction(initialPrediction->size(), getMeanOutcome());
 
   // Now loop through residual forests
   for (int i = 0; i < forests.size(); i ++) {
-    std::cout << "predicting with forest " << i << std::flush << std::endl;
 
-    // WHY IS THIS CRASHING????
     std::unique_ptr< std::vector<float> > predictedResiduals =
       forests[i]->predict(getTrainingData()->getAllFeatureData(),
                           NULL,
@@ -283,7 +277,7 @@ void multilayerForestry::addForests(size_t ntree) {
     );
 
 
-    std::cout << "Just trained residual forest # " << i << std::endl;
+    std::cout << "Just trained residual forest # " << i << std::flush << std::endl;
 
     multilayerForests.push_back(residualForest);
     /* Here add the step which replaces leaf node values with correct alphas */
@@ -302,6 +296,7 @@ void multilayerForestry::addForests(size_t ntree) {
     // ADD FLAG FOR GRADIENT TREE BOOSTING
 
     if (getgtBoost()) {
+      std::cout << "Gradient tree boosting is on, so calculating alphas for " << i << std::flush << std::endl;
       // Get leaf node ID's from residual forest
       std::unique_ptr< std::vector<tree_info> > residual_forest_dta(
           new std::vector<tree_info>
@@ -377,28 +372,40 @@ void multilayerForestry::addForests(size_t ntree) {
         // Now calculate getAlpha of each subset of averaging indices
         std::vector<float> previousPredictions = accumulated_predict(multilayerForests);
 
-        std::unique_ptr< std::vector<float> > predictionPointer (
-            new std::vector<float>(previousPredictions)
-        );
-
         std::vector<float> node_alphas(node_indices.size());
 
         for (size_t j = 0; j < node_alphas.size(); j++) {
           node_alphas[j] = get_alpha(node_indices[j],
-                                     multilayerForests);
+                                     previousPredictions);
+
           std::cout << "Made alpha " << j << " is " << node_alphas[j] << std::flush << std::endl;
         }
 
         std::cout << std::endl <<  "Node alphas :" << std::endl;
         print_vector(node_alphas);
 
+        std::vector<float> modifiedOutcomeData(avg_ids.size());
 
-        // Now use vector of alhpas to set alpha values of nodes
-    //
-    //     // all_split_ids.push_back(split_ids);
+        for (size_t j = 0; j < node_indices.size(); j++) {
+          std::vector<size_t> currentIndices = node_indices[j];
+          float currentAlpha = node_alphas[j];
+          for (const auto& index : currentIndices) {
+            modifiedOutcomeData[index] = currentAlpha;
+            std::cout << "Just set modified outcome index " << index << " to " << currentAlpha << std::flush << std::endl;
+          }
+        }
+
+        // Now set residual dataframe output column to modified outcome vector containing alphas
+
+        std::cout << "going to set outcome data now" << std::flush << std::endl;
+
+        multilayerForests[i]->getTrainingData()->setOutcomeData(modifiedOutcomeData);
+
       }
 
     } // END GT Boost step
+
+    std::cout << "Done with GT Boosting step- predicting new residuals " << std::flush  << std::endl;
 
     std::unique_ptr< std::vector<float> > predictedResiduals = residualForest->predict(getTrainingData()->getAllFeatureData(),
                                                                                        NULL,
@@ -438,12 +445,10 @@ void multilayerForestry::addForests(size_t ntree) {
     // }
 
     gammas[i] = 1 * _eta;
-    std::transform(predictedResiduals->begin(), predictedResiduals->end(),
-                   predictedResiduals->begin(), std::bind1st(std::multiplies<float>(), gammas[i]));
 
     // Update prediction after each round of gradient boosting
     std::transform(predictedOutcome.begin(), predictedOutcome.end(),
-                   predictedResiduals->begin(), predictedOutcome.begin(), std::plus<float>());
+                   predictedResiduals->begin(), predictedResiduals->end(), std::plus<float>());
   }
 
   // Save vector of forestry objects and gamma values
